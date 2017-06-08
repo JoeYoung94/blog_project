@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.shortcuts import render,get_object_or_404,redirect
+from django.utils import timezone
 from django.models import Post, Comment
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -50,3 +51,45 @@ class DraftListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return Post.objects.filter(published_date__isnull = True).order_by('created_date')
+
+###############################################################
+###############################################################
+
+# the view of posting publish
+@login_required
+def post_publish(request, pk):
+    post = get_object_or_404(Post, pk = pk)
+    post.publish()
+    return redirect('post_detail', pk = pk)
+
+
+# the view of adding Comment
+@login_required
+def add_comment_to_post(request,pk):
+    post = get_object_or_404(Post, pk = pk)
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(comment = False)
+            comment.post = post
+            comment.save()
+            return('post_detail', pk = post.pk)
+
+    else:
+        form = commentForm()
+    return render(request, 'comment_form.html', {'form':form})
+
+# the view of comment approval
+@login_required
+def comment_approve(request, pk):
+    comment = get_object_or_404(Comment, pk = pk)
+    comment.approve()
+    return redirect('post_detail', pk = comment.post.pk)
+
+# the view of removing a comment
+@login_required
+def comment_remove(request, pk):
+    comment = get_object_or_404(Comment, pk = pk)
+    post_pk = comment.post.pk
+    comment.detele()
+    return redirect('post_detail', pk = post_pk)
